@@ -1,0 +1,39 @@
+# Source files (dist is published)
+src/
+
+# Test files
+test/
+*.spec.ts
+playwright.config.ts
+playwright-report/
+test-results/
+
+# Config files
+tsconfig.json
+tsup.config.ts
+vite.config.ts
+.eslintrc*
+.prettierrc*
+
+# Development
+.git/
+.github/
+.vscode/
+.idea/
+*.log
+*.map
+
+# Example files
+stage-masks.json
+
+# Build artifacts
+node_modules/
+scripts/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation assets (keep README)
+assets/
+CONTRIBUTING.md

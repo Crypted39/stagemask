@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "screenshots": {
+    "soft-after-refresh.png": {
+      "name": "soft-after-refresh.png",
+      "masks": [],
+      "updatedAt": "2026-02-04T20:43:08.883Z"
+    },
+    "hard-dashboard-card.png": {
+      "name": "hard-dashboard-card.png",
+      "masks": [
+        {
+          "x": 97.66666666666667,
+          "y": 278.6666666666667,
+          "width": 95.99999999999999,
+          "height": 28,
+          "isPercentage": false,
+          "id": "mask_1770239351444_z6hgy8oph",
+          "createdAt": "2026-02-04T21:09:11.444Z"
+        }
+      ],
+      "updatedAt": "2026-02-04T21:20:49.987Z"
+    },
+    "soft-dashboard-card.png": {
+      "name": "soft-dashboard-card.png",
+      "masks": [
+        {
+          "x": 26.5,
+          "y": 106.5,
+          "width": 96,
+          "height": 82,
+          "isPercentage": false,
+          "id": "mask_1770239585247_thyoknleb",
+          "createdAt": "2026-02-04T21:13:05.247Z"
+        }
+      ],
+      "updatedAt": "2026-02-04T21:13:05.247Z"
+    }
+  },
+  "threshold": 0.1
+}
