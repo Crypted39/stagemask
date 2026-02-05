@@ -16,7 +16,7 @@ export function useScreenshots(): UseScreenshotsResult {
   const fetchScreenshots = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch('/api/failed-screenshots');
       if (!response.ok) {

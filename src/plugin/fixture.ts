@@ -5,13 +5,13 @@ import {
   type Locator,
   type PageScreenshotOptions,
   type TestInfo,
-} from "@playwright/test";
-import * as path from "path";
-import * as fs from "fs";
-import { ConfigManager } from "../core/config-manager";
-import { MaskRegion, CONFIG_FILENAME } from "../core/types";
-import { PNG } from "pngjs";
-import pixelmatch from "pixelmatch";
+} from '@playwright/test';
+import * as path from 'path';
+import * as fs from 'fs';
+import { ConfigManager } from '../core/config-manager';
+import { MaskRegion, CONFIG_FILENAME } from '../core/types';
+import { PNG } from 'pngjs';
+import pixelmatch from 'pixelmatch';
 
 /**
  * Extended test fixture that adds visual mask functionality
@@ -21,20 +21,14 @@ export interface VisualMaskFixtures {
    * Take a screenshot with automatic mask application.
    * Throws immediately if the screenshot doesn't match (hard assertion).
    */
-  visualSnapshot: (
-    name: string,
-    options?: VisualSnapshotOptions,
-  ) => Promise<void>;
+  visualSnapshot: (name: string, options?: VisualSnapshotOptions) => Promise<void>;
 
   /**
    * Take a screenshot with automatic mask application (soft assertion).
    * Collects failures without throwing immediately - test continues running.
    * All failures are thrown at the end of the test.
    */
-  softVisualSnapshot: (
-    name: string,
-    options?: VisualSnapshotOptions,
-  ) => Promise<void>;
+  softVisualSnapshot: (name: string, options?: VisualSnapshotOptions) => Promise<void>;
 }
 
 export interface VisualSnapshotOptions {
@@ -72,7 +66,7 @@ function getConfigManager(): ConfigManager {
     console.log(`[stagemask] Config exists: ${fs.existsSync(configPath)}`);
     if (fs.existsSync(configPath)) {
       console.log(
-        `[stagemask] Config content: ${fs.readFileSync(configPath, "utf-8").substring(0, 200)}...`,
+        `[stagemask] Config content: ${fs.readFileSync(configPath, 'utf-8').substring(0, 200)}...`,
       );
     }
     configManager = new ConfigManager(cwd);
@@ -119,9 +113,7 @@ async function performSnapshotComparison(
   const configMasks = config.getMasks(name);
   const threshold = options.threshold ?? config.getEffectiveThreshold(name);
 
-  console.log(
-    `[stagemask] Screenshot "${name}": found ${configMasks.length} masks`,
-  );
+  console.log(`[stagemask] Screenshot "${name}": found ${configMasks.length} masks`);
   if (configMasks.length > 0) {
     console.log(`[stagemask] Masks:`, JSON.stringify(configMasks, null, 2));
   }
@@ -162,7 +154,7 @@ async function performSnapshotComparison(
   const snapshotDir = testInfo.snapshotDir;
   const snapshotSuffix = testInfo.snapshotSuffix;
   const snapshotName = snapshotSuffix
-    ? `${name.replace(".png", "")}-${snapshotSuffix}.png`
+    ? `${name.replace('.png', '')}-${snapshotSuffix}.png`
     : name;
   const snapshotPath = path.join(snapshotDir, snapshotName);
 
@@ -170,7 +162,7 @@ async function performSnapshotComparison(
 
   // Check if we should update baselines
   const shouldUpdate =
-    options.updateBaseline || testInfo.config.updateSnapshots === "all";
+    options.updateBaseline || testInfo.config.updateSnapshots === 'all';
   const baselineExists = fs.existsSync(snapshotPath);
 
   // First run or update mode: create/update baseline and return success
@@ -193,10 +185,7 @@ async function performSnapshotComparison(
   const actualPng = PNG.sync.read(screenshotBuffer);
 
   // Check dimensions match
-  if (
-    baselinePng.width !== actualPng.width ||
-    baselinePng.height !== actualPng.height
-  ) {
+  if (baselinePng.width !== actualPng.width || baselinePng.height !== actualPng.height) {
     const error =
       `Screenshot "${name}" dimensions don't match. ` +
       `Baseline: ${baselinePng.width}x${baselinePng.height}, ` +
@@ -253,7 +242,7 @@ async function performSnapshotComparison(
     const outputDir = testInfo.outputDir;
     fs.mkdirSync(outputDir, { recursive: true });
 
-    const baseName = name.replace(".png", "");
+    const baseName = name.replace('.png', '');
     const actualPath = path.join(outputDir, `${baseName}-actual.png`);
     const expectedPath = path.join(outputDir, `${baseName}-expected.png`);
     const diffPath = path.join(outputDir, `${baseName}-diff.png`);
@@ -268,7 +257,7 @@ async function performSnapshotComparison(
 
     // Save metadata for the review UI
     const titlePath = testInfo.titlePath;
-    const testFile = testInfo.file ? path.basename(testInfo.file) : "unknown";
+    const testFile = testInfo.file ? path.basename(testInfo.file) : 'unknown';
 
     console.log(`[stagemask] titlePath: ${JSON.stringify(titlePath)}`);
     console.log(`[stagemask] testFile: ${testFile}`);
@@ -278,10 +267,9 @@ async function performSnapshotComparison(
     const testName =
       pathWithoutProject.length > 0
         ? pathWithoutProject[pathWithoutProject.length - 1]
-        : "Unknown Test";
+        : 'Unknown Test';
     const describePath = pathWithoutProject.slice(0, -1);
-    const describeName =
-      describePath.length > 0 ? describePath.join(" › ") : "Tests";
+    const describeName = describePath.length > 0 ? describePath.join(' › ') : 'Tests';
 
     console.log(
       `[stagemask] Parsed - describeName: "${describeName}", testName: "${testName}"`,
@@ -301,7 +289,7 @@ async function performSnapshotComparison(
     // Attach to test results
     await testInfo.attach(baseName, {
       body: screenshotBuffer,
-      contentType: "image/png",
+      contentType: 'image/png',
     });
 
     const error =
@@ -329,16 +317,8 @@ async function performSnapshotComparison(
  */
 export const test = base.extend<VisualMaskFixtures>({
   visualSnapshot: async ({ page }, use, testInfo) => {
-    const snapshot = async (
-      name: string,
-      options: VisualSnapshotOptions = {},
-    ) => {
-      const result = await performSnapshotComparison(
-        page,
-        testInfo,
-        name,
-        options,
-      );
+    const snapshot = async (name: string, options: VisualSnapshotOptions = {}) => {
+      const result = await performSnapshotComparison(page, testInfo, name, options);
       if (!result.passed && result.error) {
         throw new Error(result.error);
       }
@@ -351,21 +331,11 @@ export const test = base.extend<VisualMaskFixtures>({
     // Collect all soft assertion failures
     const failures: SnapshotResult[] = [];
 
-    const softSnapshot = async (
-      name: string,
-      options: VisualSnapshotOptions = {},
-    ) => {
-      const result = await performSnapshotComparison(
-        page,
-        testInfo,
-        name,
-        options,
-      );
+    const softSnapshot = async (name: string, options: VisualSnapshotOptions = {}) => {
+      const result = await performSnapshotComparison(page, testInfo, name, options);
       if (!result.passed) {
         failures.push(result);
-        console.log(
-          `[stagemask] Soft assertion failed for "${name}" - continuing test`,
-        );
+        console.log(`[stagemask] Soft assertion failed for "${name}" - continuing test`);
       }
     };
 
@@ -378,7 +348,7 @@ export const test = base.extend<VisualMaskFixtures>({
           (f, i) =>
             `${i + 1}. ${f.screenshotName}: ${f.diffPixels} pixels different (${f.diffPercentage?.toFixed(4)}%)`,
         )
-        .join("\n");
+        .join('\n');
 
       throw new Error(
         `${failures.length} visual snapshot(s) failed:\n${failureMessages}\n\n` +

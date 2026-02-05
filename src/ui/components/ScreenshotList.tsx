@@ -18,8 +18,10 @@ interface GroupedScreenshots {
 // Only show tooltip if text is truncated
 const handleMouseEnter = (e: React.MouseEvent<HTMLElement>) => {
   const target = e.currentTarget;
-  const textElement = target.querySelector('.screenshot-group-name, .screenshot-test-name, .screenshot-item-name') as HTMLElement;
-  
+  const textElement = target.querySelector(
+    '.screenshot-group-name, .screenshot-test-name, .screenshot-item-name',
+  ) as HTMLElement;
+
   if (textElement && textElement.scrollWidth > textElement.clientWidth) {
     target.title = textElement.textContent || '';
   } else {
@@ -65,7 +67,7 @@ export function ScreenshotList({ screenshots, selected, onSelect }: ScreenshotLi
   }, [screenshots]);
 
   const toggleGroup = (describeName: string) => {
-    setCollapsedGroups(prev => {
+    setCollapsedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(describeName)) {
         next.delete(describeName);
@@ -77,7 +79,7 @@ export function ScreenshotList({ screenshots, selected, onSelect }: ScreenshotLi
   };
 
   const toggleTest = (testKey: string) => {
-    setCollapsedTests(prev => {
+    setCollapsedTests((prev) => {
       const next = new Set(prev);
       if (next.has(testKey)) {
         next.delete(testKey);
@@ -91,8 +93,12 @@ export function ScreenshotList({ screenshots, selected, onSelect }: ScreenshotLi
   if (screenshots.length === 0) {
     return (
       <div className="empty-state" style={{ padding: '2rem 1rem' }}>
-        <div className="empty-state-icon" style={{ fontSize: '2rem' }}>✓</div>
-        <h3 className="empty-state-title" style={{ fontSize: '1rem' }}>All tests passing</h3>
+        <div className="empty-state-icon" style={{ fontSize: '2rem' }}>
+          ✓
+        </div>
+        <h3 className="empty-state-title" style={{ fontSize: '1rem' }}>
+          All tests passing
+        </h3>
         <p className="empty-state-text" style={{ fontSize: '0.875rem' }}>
           No failed screenshot comparisons found.
         </p>
@@ -104,49 +110,59 @@ export function ScreenshotList({ screenshots, selected, onSelect }: ScreenshotLi
     <div className="screenshot-list">
       {grouped.map((group) => {
         const isGroupCollapsed = collapsedGroups.has(group.describeName);
-        const groupScreenshotCount = group.tests.reduce((sum, t) => sum + t.screenshots.length, 0);
-        
+        const groupScreenshotCount = group.tests.reduce(
+          (sum, t) => sum + t.screenshots.length,
+          0,
+        );
+
         return (
           <div key={group.describeName} className="screenshot-group">
-            <button 
+            <button
               className="screenshot-group-header"
               onClick={() => toggleGroup(group.describeName)}
               onMouseEnter={handleMouseEnter}
             >
-              <span className={`screenshot-group-chevron ${isGroupCollapsed ? 'collapsed' : ''}`}>
+              <span
+                className={`screenshot-group-chevron ${isGroupCollapsed ? 'collapsed' : ''}`}
+              >
                 ▼
               </span>
               <span className="screenshot-group-icon">📁</span>
               <span className="screenshot-group-name">{group.describeName}</span>
               <span className="screenshot-group-count">{groupScreenshotCount}</span>
             </button>
-            
+
             {!isGroupCollapsed && (
               <div className="screenshot-group-content">
                 {group.tests.map((test) => {
                   const testKey = `${group.describeName}::${test.testName}`;
                   const isTestCollapsed = collapsedTests.has(testKey);
-                  const showTestHeader = group.tests.length > 1 || test.screenshots.length > 1;
-                  
+                  const showTestHeader =
+                    group.tests.length > 1 || test.screenshots.length > 1;
+
                   return (
                     <div key={test.testName} className="screenshot-test">
                       {showTestHeader && (
-                        <button 
+                        <button
                           className="screenshot-test-header"
                           onClick={() => toggleTest(testKey)}
                           onMouseEnter={handleMouseEnter}
                         >
-                          <span className={`screenshot-test-chevron ${isTestCollapsed ? 'collapsed' : ''}`}>
+                          <span
+                            className={`screenshot-test-chevron ${isTestCollapsed ? 'collapsed' : ''}`}
+                          >
                             ▼
                           </span>
                           <span className="screenshot-test-icon">🧪</span>
                           <span className="screenshot-test-name">{test.testName}</span>
                           {test.screenshots.length > 1 && (
-                            <span className="screenshot-test-count">{test.screenshots.length}</span>
+                            <span className="screenshot-test-count">
+                              {test.screenshots.length}
+                            </span>
                           )}
                         </button>
                       )}
-                      
+
                       {(!showTestHeader || !isTestCollapsed) && (
                         <div className="screenshot-test-items">
                           {test.screenshots.map((screenshot) => (
@@ -158,7 +174,9 @@ export function ScreenshotList({ screenshots, selected, onSelect }: ScreenshotLi
                             >
                               <div className="screenshot-item-icon">✗</div>
                               <div className="screenshot-item-info">
-                                <div className="screenshot-item-name">{screenshot.screenshotName}</div>
+                                <div className="screenshot-item-name">
+                                  {screenshot.screenshotName}
+                                </div>
                               </div>
                             </button>
                           ))}

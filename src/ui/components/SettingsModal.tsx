@@ -19,7 +19,12 @@ const PRESET_COLORS = [
   '#ec4899', // Pink
 ];
 
-export function SettingsModal({ isOpen, onClose, maskColor, onSave }: SettingsModalProps) {
+export function SettingsModal({
+  isOpen,
+  onClose,
+  maskColor,
+  onSave,
+}: SettingsModalProps) {
   const [tempMaskColor, setTempMaskColor] = useState(maskColor);
 
   // Reset temp color when modal opens
@@ -56,7 +61,7 @@ export function SettingsModal({ isOpen, onClose, maskColor, onSave }: SettingsMo
             ×
           </button>
         </div>
-        
+
         <div className="modal-body">
           <div className="setting-item">
             <label className="setting-label">Mask Color</label>
@@ -91,14 +96,14 @@ export function SettingsModal({ isOpen, onClose, maskColor, onSave }: SettingsMo
               </div>
               <div className="color-preview">
                 <span className="color-preview-label">Preview:</span>
-                <div 
+                <div
                   className="color-preview-box"
-                  style={{ 
+                  style={{
                     backgroundColor: `${tempMaskColor}40`,
-                    borderColor: tempMaskColor 
+                    borderColor: tempMaskColor,
                   }}
                 >
-                  <div 
+                  <div
                     className="color-preview-badge"
                     style={{ backgroundColor: tempMaskColor }}
                   >
@@ -109,7 +114,7 @@ export function SettingsModal({ isOpen, onClose, maskColor, onSave }: SettingsMo
             </div>
           </div>
         </div>
-        
+
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={handleCancel}>
             Cancel

@@ -1,17 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { MaskRegion } from "../../core/types";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { MaskRegion } from '../../core/types';
 
 interface UseMasksResult {
   masks: MaskRegion[];
   loading: boolean;
   error: string | null;
-  addMask: (
-    mask: Omit<MaskRegion, "id" | "createdAt">,
-  ) => Promise<MaskRegion | null>;
-  updateMask: (
-    maskId: string,
-    updates: Partial<MaskRegion>,
-  ) => Promise<boolean>;
+  addMask: (mask: Omit<MaskRegion, 'id' | 'createdAt'>) => Promise<MaskRegion | null>;
+  updateMask: (maskId: string, updates: Partial<MaskRegion>) => Promise<boolean>;
   removeMask: (maskId: string) => Promise<boolean>;
   refresh: () => Promise<void>;
 }
@@ -31,20 +26,17 @@ export function useMasks(screenshotName: string): UseMasksResult {
       if (!screenshotName) return;
 
       try {
-        const response = await fetch(
-          `/api/masks/${encodeURIComponent(screenshotName)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ masks: masksToSave }),
-          },
-        );
+        const response = await fetch(`/api/masks/${encodeURIComponent(screenshotName)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ masks: masksToSave }),
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP error: ${response.status}`);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to save masks");
+        setError(err instanceof Error ? err.message : 'Failed to save masks');
       }
     },
     [screenshotName],
@@ -93,16 +85,14 @@ export function useMasks(screenshotName: string): UseMasksResult {
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/masks/${encodeURIComponent(screenshotName)}`,
-      );
+      const response = await fetch(`/api/masks/${encodeURIComponent(screenshotName)}`);
       if (!response.ok) {
         throw new Error(`HTTP error: ${response.status}`);
       }
       const data = await response.json();
       setMasks(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load masks");
+      setError(err instanceof Error ? err.message : 'Failed to load masks');
       setMasks([]);
     } finally {
       setLoading(false);
@@ -116,7 +106,7 @@ export function useMasks(screenshotName: string): UseMasksResult {
   // Add a new mask
   const addMask = useCallback(
     async (
-      maskData: Omit<MaskRegion, "id" | "createdAt">,
+      maskData: Omit<MaskRegion, 'id' | 'createdAt'>,
     ): Promise<MaskRegion | null> => {
       if (!screenshotName) return null;
 
@@ -124,8 +114,8 @@ export function useMasks(screenshotName: string): UseMasksResult {
         const response = await fetch(
           `/api/masks/${encodeURIComponent(screenshotName)}/add`,
           {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(maskData),
           },
         );
@@ -138,7 +128,7 @@ export function useMasks(screenshotName: string): UseMasksResult {
         setMasks((prev) => [...prev, newMask]);
         return newMask;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to add mask");
+        setError(err instanceof Error ? err.message : 'Failed to add mask');
         return null;
       }
     },
@@ -170,7 +160,7 @@ export function useMasks(screenshotName: string): UseMasksResult {
         const response = await fetch(
           `/api/masks/${encodeURIComponent(screenshotName)}/${maskId}`,
           {
-            method: "DELETE",
+            method: 'DELETE',
           },
         );
 
@@ -181,7 +171,7 @@ export function useMasks(screenshotName: string): UseMasksResult {
         setMasks((prev) => prev.filter((m) => m.id !== maskId));
         return true;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to remove mask");
+        setError(err instanceof Error ? err.message : 'Failed to remove mask');
         return false;
       }
     },

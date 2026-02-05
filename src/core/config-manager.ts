@@ -1,12 +1,12 @@
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   MaskConfig,
   ScreenshotConfig,
   MaskRegion,
   DEFAULT_CONFIG,
   CONFIG_FILENAME,
-} from "./types";
+} from './types';
 
 /**
  * Manages the visual mask configuration file
@@ -27,15 +27,12 @@ export class ConfigManager {
   private load(): MaskConfig {
     try {
       if (fs.existsSync(this.configPath)) {
-        const content = fs.readFileSync(this.configPath, "utf-8");
+        const content = fs.readFileSync(this.configPath, 'utf-8');
         const parsed = JSON.parse(content) as MaskConfig;
         return this.migrate(parsed);
       }
     } catch (error) {
-      console.warn(
-        `Warning: Could not load config from ${this.configPath}:`,
-        error,
-      );
+      console.warn(`Warning: Could not load config from ${this.configPath}:`, error);
     }
     return { ...DEFAULT_CONFIG };
   }
@@ -67,11 +64,7 @@ export class ConfigManager {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(
-      this.configPath,
-      JSON.stringify(this.config, null, 2),
-      "utf-8",
-    );
+    fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2), 'utf-8');
   }
 
   /**
@@ -110,8 +103,7 @@ export class ConfigManager {
       };
     }
     this.config.screenshots[screenshotName].masks = masks;
-    this.config.screenshots[screenshotName].updatedAt =
-      new Date().toISOString();
+    this.config.screenshots[screenshotName].updatedAt = new Date().toISOString();
   }
 
   /**
@@ -119,7 +111,7 @@ export class ConfigManager {
    */
   addMask(
     screenshotName: string,
-    mask: Omit<MaskRegion, "id" | "createdAt">,
+    mask: Omit<MaskRegion, 'id' | 'createdAt'>,
   ): MaskRegion {
     const newMask: MaskRegion = {
       ...mask,
@@ -136,8 +128,7 @@ export class ConfigManager {
     }
 
     this.config.screenshots[screenshotName].masks.push(newMask);
-    this.config.screenshots[screenshotName].updatedAt =
-      new Date().toISOString();
+    this.config.screenshots[screenshotName].updatedAt = new Date().toISOString();
 
     return newMask;
   }
@@ -188,8 +179,7 @@ export class ConfigManager {
       };
     }
     this.config.screenshots[screenshotName].threshold = threshold;
-    this.config.screenshots[screenshotName].updatedAt =
-      new Date().toISOString();
+    this.config.screenshots[screenshotName].updatedAt = new Date().toISOString();
   }
 
   /**
@@ -231,10 +221,7 @@ export class ConfigManager {
    * Get effective threshold for a screenshot (screenshot-specific or global)
    */
   getEffectiveThreshold(screenshotName: string): number {
-    return (
-      this.config.screenshots[screenshotName]?.threshold ??
-      this.config.threshold
-    );
+    return this.config.screenshots[screenshotName]?.threshold ?? this.config.threshold;
   }
 
   /**

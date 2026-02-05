@@ -41,35 +41,43 @@ export function ImageEditor({
 }: ImageEditorProps) {
   // Core transform state - single source of truth for pan/zoom (shared across all panels)
   const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, scale: 1 });
-  
+
   // Interaction states
   const [isPanning, setIsPanning] = useState(false);
   const [isSpacePressed, setIsSpacePressed] = useState(false);
-  const [panStartPoint, setPanStartPoint] = useState<{ x: number; y: number } | null>(null);
+  const [panStartPoint, setPanStartPoint] = useState<{ x: number; y: number } | null>(
+    null,
+  );
   const [panStartTransform, setPanStartTransform] = useState<Transform | null>(null);
-  
+
   // Drawing/editing states
   const [drawing, setDrawing] = useState<DrawingRect | null>(null);
-  const [dragging, setDragging] = useState<{ maskId: string; offsetX: number; offsetY: number } | null>(null);
-  const [resizing, setResizing] = useState<{ maskId: string; handle: string } | null>(null);
-  
+  const [dragging, setDragging] = useState<{
+    maskId: string;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
+  const [resizing, setResizing] = useState<{ maskId: string; handle: string } | null>(
+    null,
+  );
+
   // Image dimensions
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [imageLoaded, setImageLoaded] = useState(false);
-  
+
   // Refs - we use the active container ref for the panel being interacted with
   const activeContainerRef = useRef<HTMLDivElement | null>(null);
   const baselineContainerRef = useRef<HTMLDivElement>(null);
   const actualContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
-  
+
   // Build image URLs
   const baselineUrl = `/api/image?path=${encodeURIComponent(screenshot.baselinePath)}`;
   const actualUrl = `/api/image?path=${encodeURIComponent(screenshot.actualPath)}`;
   const diffUrl = screenshot.diffPath
     ? `/api/image?path=${encodeURIComponent(screenshot.diffPath)}`
     : null;
-  
+
   // Reset transform when screenshot changes
   useEffect(() => {
     setTransform({ x: 0, y: 0, scale: 1 });
@@ -80,16 +88,16 @@ export function ImageEditor({
     setDragging(null);
     setResizing(null);
   }, [screenshot.screenshotName, onSelectMask]);
-  
+
   // Get the first available container for initial fit calculation
   const getActiveContainer = useCallback((): HTMLDivElement | null => {
     return actualContainerRef.current || baselineContainerRef.current;
   }, []);
-  
+
   // Recenter image when view mode changes
   useEffect(() => {
     if (!imageLoaded || imageDimensions.width === 0) return;
-    
+
     // Small delay to allow the container to resize after view mode change
     const timer = setTimeout(() => {
       const container = getActiveContainer();
@@ -98,195 +106,234 @@ export function ImageEditor({
         const padding = 48;
         const availableWidth = containerRect.width - padding;
         const availableHeight = containerRect.height - padding;
-        
+
         const scaleX = availableWidth / imageDimensions.width;
         const scaleY = availableHeight / imageDimensions.height;
         const fitScale = Math.min(scaleX, scaleY, 1);
-        
+
         const scaledWidth = imageDimensions.width * fitScale;
         const scaledHeight = imageDimensions.height * fitScale;
         const x = (containerRect.width - scaledWidth) / 2;
         const y = (containerRect.height - scaledHeight) / 2;
-        
+
         setTransform({ x, y, scale: fitScale });
       }
     }, 50);
-    
+
     return () => clearTimeout(timer);
   }, [viewMode, imageLoaded, imageDimensions, getActiveContainer]);
-  
+
   // Fit image to container on load
-  const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    const img = e.currentTarget;
-    const naturalWidth = img.naturalWidth;
-    const naturalHeight = img.naturalHeight;
-    
-    // Only fit on first load
-    if (imageLoaded) return;
-    
-    setImageDimensions({ width: naturalWidth, height: naturalHeight });
-    setImageLoaded(true);
-    
-    const container = getActiveContainer();
-    if (container) {
-      const containerRect = container.getBoundingClientRect();
-      const padding = 48;
-      const availableWidth = containerRect.width - padding;
-      const availableHeight = containerRect.height - padding;
-      
-      const scaleX = availableWidth / naturalWidth;
-      const scaleY = availableHeight / naturalHeight;
-      const fitScale = Math.min(scaleX, scaleY, 1); // Don't zoom in beyond 100%
-      
-      // Center the image
-      const scaledWidth = naturalWidth * fitScale;
-      const scaledHeight = naturalHeight * fitScale;
-      const x = (containerRect.width - scaledWidth) / 2;
-      const y = (containerRect.height - scaledHeight) / 2;
-      
-      setTransform({ x, y, scale: fitScale });
-    }
-  }, [imageLoaded, getActiveContainer]);
-  
+  const handleImageLoad = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const img = e.currentTarget;
+      const naturalWidth = img.naturalWidth;
+      const naturalHeight = img.naturalHeight;
+
+      // Only fit on first load
+      if (imageLoaded) return;
+
+      setImageDimensions({ width: naturalWidth, height: naturalHeight });
+      setImageLoaded(true);
+
+      const container = getActiveContainer();
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        const padding = 48;
+        const availableWidth = containerRect.width - padding;
+        const availableHeight = containerRect.height - padding;
+
+        const scaleX = availableWidth / naturalWidth;
+        const scaleY = availableHeight / naturalHeight;
+        const fitScale = Math.min(scaleX, scaleY, 1); // Don't zoom in beyond 100%
+
+        // Center the image
+        const scaledWidth = naturalWidth * fitScale;
+        const scaledHeight = naturalHeight * fitScale;
+        const x = (containerRect.width - scaledWidth) / 2;
+        const y = (containerRect.height - scaledHeight) / 2;
+
+        setTransform({ x, y, scale: fitScale });
+      }
+    },
+    [imageLoaded, getActiveContainer],
+  );
+
   // Convert screen coordinates to image coordinates
-  const screenToImage = useCallback((screenX: number, screenY: number, container: HTMLDivElement | null): { x: number; y: number } | null => {
-    if (!container) return null;
-    
-    const containerRect = container.getBoundingClientRect();
-    const relativeX = screenX - containerRect.left;
-    const relativeY = screenY - containerRect.top;
-    
-    // Convert from screen space to image space
-    const imageX = (relativeX - transform.x) / transform.scale;
-    const imageY = (relativeY - transform.y) / transform.scale;
-    
-    return { x: imageX, y: imageY };
-  }, [transform]);
-  
+  const screenToImage = useCallback(
+    (
+      screenX: number,
+      screenY: number,
+      container: HTMLDivElement | null,
+    ): { x: number; y: number } | null => {
+      if (!container) return null;
+
+      const containerRect = container.getBoundingClientRect();
+      const relativeX = screenX - containerRect.left;
+      const relativeY = screenY - containerRect.top;
+
+      // Convert from screen space to image space
+      const imageX = (relativeX - transform.x) / transform.scale;
+      const imageY = (relativeY - transform.y) / transform.scale;
+
+      return { x: imageX, y: imageY };
+    },
+    [transform],
+  );
+
   // Zoom with mouse wheel, centered on cursor
-  const handleWheel = useCallback((e: React.WheelEvent, container: HTMLDivElement | null) => {
-    e.preventDefault();
-    
-    if (!container) return;
-    
-    const delta = -e.deltaY * 0.001;
-    const newScale = Math.max(0.1, Math.min(5, transform.scale * (1 + delta)));
-    
-    const containerRect = container.getBoundingClientRect();
-    const mouseX = e.clientX - containerRect.left;
-    const mouseY = e.clientY - containerRect.top;
-    
-    // Calculate the point under the cursor in image space before zoom
-    const imageX = (mouseX - transform.x) / transform.scale;
-    const imageY = (mouseY - transform.y) / transform.scale;
-    
-    // Calculate new position to keep the same point under cursor
-    const newX = mouseX - imageX * newScale;
-    const newY = mouseY - imageY * newScale;
-    
-    setTransform({ x: newX, y: newY, scale: newScale });
-  }, [transform]);
-  
+  const handleWheel = useCallback(
+    (e: React.WheelEvent, container: HTMLDivElement | null) => {
+      e.preventDefault();
+
+      if (!container) return;
+
+      const delta = -e.deltaY * 0.001;
+      const newScale = Math.max(0.1, Math.min(5, transform.scale * (1 + delta)));
+
+      const containerRect = container.getBoundingClientRect();
+      const mouseX = e.clientX - containerRect.left;
+      const mouseY = e.clientY - containerRect.top;
+
+      // Calculate the point under the cursor in image space before zoom
+      const imageX = (mouseX - transform.x) / transform.scale;
+      const imageY = (mouseY - transform.y) / transform.scale;
+
+      // Calculate new position to keep the same point under cursor
+      const newX = mouseX - imageX * newScale;
+      const newY = mouseY - imageY * newScale;
+
+      setTransform({ x: newX, y: newY, scale: newScale });
+    },
+    [transform],
+  );
+
   // Handle mouse down
-  const handleMouseDown = useCallback((e: React.MouseEvent, container: HTMLDivElement | null) => {
-    if (e.button !== 0) return;
-    
-    // Prevent image/text selection during drawing
-    e.preventDefault();
-    
-    // Store the active container for subsequent moves
-    activeContainerRef.current = container;
-    
-    const imagePos = screenToImage(e.clientX, e.clientY, container);
-    if (!imagePos) return;
-    
-    // Panning mode (space pressed)
-    if (isSpacePressed) {
-      setIsPanning(true);
-      setPanStartPoint({ x: e.clientX, y: e.clientY });
-      setPanStartTransform({ ...transform });
-      return;
-    }
-    
-    // Check if clicking on a mask
-    const clickedMask = masks.find((mask) => {
-      return (
-        imagePos.x >= mask.x &&
-        imagePos.x <= mask.x + mask.width &&
-        imagePos.y >= mask.y &&
-        imagePos.y <= mask.y + mask.height
-      );
-    });
-    
-    if (clickedMask) {
-      onSelectMask(clickedMask.id);
-      setDragging({
-        maskId: clickedMask.id,
-        offsetX: imagePos.x - clickedMask.x,
-        offsetY: imagePos.y - clickedMask.y,
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent, container: HTMLDivElement | null) => {
+      if (e.button !== 0) return;
+
+      // Prevent image/text selection during drawing
+      e.preventDefault();
+
+      // Store the active container for subsequent moves
+      activeContainerRef.current = container;
+
+      const imagePos = screenToImage(e.clientX, e.clientY, container);
+      if (!imagePos) return;
+
+      // Panning mode (space pressed)
+      if (isSpacePressed) {
+        setIsPanning(true);
+        setPanStartPoint({ x: e.clientX, y: e.clientY });
+        setPanStartTransform({ ...transform });
+        return;
+      }
+
+      // Check if clicking on a mask
+      const clickedMask = masks.find((mask) => {
+        return (
+          imagePos.x >= mask.x &&
+          imagePos.x <= mask.x + mask.width &&
+          imagePos.y >= mask.y &&
+          imagePos.y <= mask.y + mask.height
+        );
       });
-    } else {
-      // Start drawing new mask
-      onSelectMask(null);
-      setDrawing({
-        startX: imagePos.x,
-        startY: imagePos.y,
-        endX: imagePos.x,
-        endY: imagePos.y,
-      });
-    }
-  }, [screenToImage, isSpacePressed, transform, masks, onSelectMask]);
-  
+
+      if (clickedMask) {
+        onSelectMask(clickedMask.id);
+        setDragging({
+          maskId: clickedMask.id,
+          offsetX: imagePos.x - clickedMask.x,
+          offsetY: imagePos.y - clickedMask.y,
+        });
+      } else {
+        // Start drawing new mask
+        onSelectMask(null);
+        setDrawing({
+          startX: imagePos.x,
+          startY: imagePos.y,
+          endX: imagePos.x,
+          endY: imagePos.y,
+        });
+      }
+    },
+    [screenToImage, isSpacePressed, transform, masks, onSelectMask],
+  );
+
   // Handle mouse move
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    // Panning
-    if (isPanning && panStartPoint && panStartTransform) {
-      const dx = e.clientX - panStartPoint.x;
-      const dy = e.clientY - panStartPoint.y;
-      
-      setTransform({
-        ...panStartTransform,
-        x: panStartTransform.x + dx,
-        y: panStartTransform.y + dy,
-      });
-      return;
-    }
-    
-    // Skip if in pan mode but not actively panning
-    if (isSpacePressed) return;
-    
-    const container = activeContainerRef.current;
-    const imagePos = screenToImage(e.clientX, e.clientY, container);
-    if (!imagePos) return;
-    
-    // Drawing new mask
-    if (drawing) {
-      setDrawing((prev) => prev ? { ...prev, endX: imagePos.x, endY: imagePos.y } : null);
-      return;
-    }
-    
-    // Dragging existing mask
-    if (dragging) {
-      const mask = masks.find((m) => m.id === dragging.maskId);
-      if (mask) {
-        const newX = Math.max(0, Math.min(imageDimensions.width - mask.width, imagePos.x - dragging.offsetX));
-        const newY = Math.max(0, Math.min(imageDimensions.height - mask.height, imagePos.y - dragging.offsetY));
-        onUpdateMask(dragging.maskId, { x: newX, y: newY });
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      // Panning
+      if (isPanning && panStartPoint && panStartTransform) {
+        const dx = e.clientX - panStartPoint.x;
+        const dy = e.clientY - panStartPoint.y;
+
+        setTransform({
+          ...panStartTransform,
+          x: panStartTransform.x + dx,
+          y: panStartTransform.y + dy,
+        });
+        return;
       }
-      return;
-    }
-    
-    // Resizing mask
-    if (resizing) {
-      const mask = masks.find((m) => m.id === resizing.maskId);
-      if (mask) {
-        const updates = calculateResize(mask, resizing.handle, imagePos);
-        onUpdateMask(resizing.maskId, updates);
+
+      // Skip if in pan mode but not actively panning
+      if (isSpacePressed) return;
+
+      const container = activeContainerRef.current;
+      const imagePos = screenToImage(e.clientX, e.clientY, container);
+      if (!imagePos) return;
+
+      // Drawing new mask
+      if (drawing) {
+        setDrawing((prev) =>
+          prev ? { ...prev, endX: imagePos.x, endY: imagePos.y } : null,
+        );
+        return;
       }
-      return;
-    }
-  }, [isPanning, panStartPoint, panStartTransform, isSpacePressed, screenToImage, drawing, dragging, resizing, masks, imageDimensions, onUpdateMask]);
-  
+
+      // Dragging existing mask
+      if (dragging) {
+        const mask = masks.find((m) => m.id === dragging.maskId);
+        if (mask) {
+          const newX = Math.max(
+            0,
+            Math.min(imageDimensions.width - mask.width, imagePos.x - dragging.offsetX),
+          );
+          const newY = Math.max(
+            0,
+            Math.min(imageDimensions.height - mask.height, imagePos.y - dragging.offsetY),
+          );
+          onUpdateMask(dragging.maskId, { x: newX, y: newY });
+        }
+        return;
+      }
+
+      // Resizing mask
+      if (resizing) {
+        const mask = masks.find((m) => m.id === resizing.maskId);
+        if (mask) {
+          const updates = calculateResize(mask, resizing.handle, imagePos);
+          onUpdateMask(resizing.maskId, updates);
+        }
+        return;
+      }
+    },
+    [
+      isPanning,
+      panStartPoint,
+      panStartTransform,
+      isSpacePressed,
+      screenToImage,
+      drawing,
+      dragging,
+      resizing,
+      masks,
+      imageDimensions,
+      onUpdateMask,
+    ],
+  );
+
   // Handle mouse up
   const handleMouseUp = useCallback(() => {
     // End panning
@@ -297,7 +344,7 @@ export function ImageEditor({
       activeContainerRef.current = null;
       return;
     }
-    
+
     // Finish drawing
     if (drawing) {
       const rect = normalizeRect(drawing);
@@ -306,12 +353,12 @@ export function ImageEditor({
       }
       setDrawing(null);
     }
-    
+
     setDragging(null);
     setResizing(null);
     activeContainerRef.current = null;
   }, [isPanning, drawing, onAddMask]);
-  
+
   // Handle mouse leave
   const handleMouseLeave = useCallback(() => {
     // Only reset panning state if we leave the container
@@ -322,27 +369,36 @@ export function ImageEditor({
       setPanStartTransform(null);
     }
   }, [isPanning]);
-  
+
   // Handle resize start
-  const handleResizeStart = useCallback((e: React.MouseEvent, maskId: string, handle: string) => {
-    e.stopPropagation();
-    e.preventDefault();
-    // Set the active container from the event target's closest canvas-wrapper
-    const wrapper = (e.target as HTMLElement).closest('.canvas-wrapper') as HTMLDivElement | null;
-    activeContainerRef.current = wrapper;
-    onSelectMask(maskId);
-    setResizing({ maskId, handle });
-  }, [onSelectMask]);
-  
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent, maskId: string, handle: string) => {
+      e.stopPropagation();
+      e.preventDefault();
+      // Set the active container from the event target's closest canvas-wrapper
+      const wrapper = (e.target as HTMLElement).closest(
+        '.canvas-wrapper',
+      ) as HTMLDivElement | null;
+      activeContainerRef.current = wrapper;
+      onSelectMask(maskId);
+      setResizing({ maskId, handle });
+    },
+    [onSelectMask],
+  );
+
   // Keyboard handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore keyboard shortcuts when typing in input fields
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
         return;
       }
-      
+
       if (e.code === 'Space' && !e.repeat) {
         e.preventDefault();
         setIsSpacePressed(true);
@@ -357,14 +413,18 @@ export function ImageEditor({
         onSelectMask(null);
       }
     };
-    
+
     const handleKeyUp = (e: KeyboardEvent) => {
       // Ignore keyboard shortcuts when typing in input fields
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
         return;
       }
-      
+
       if (e.code === 'Space') {
         e.preventDefault();
         setIsSpacePressed(false);
@@ -373,16 +433,16 @@ export function ImageEditor({
         setPanStartTransform(null);
       }
     };
-    
+
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
-    
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
     };
   }, [selectedMaskId, onRemoveMask, onSelectMask]);
-  
+
   // Zoom controls
   const zoomIn = useCallback(() => {
     setTransform((prev) => {
@@ -393,10 +453,10 @@ export function ImageEditor({
         const rect = container.getBoundingClientRect();
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
-        
+
         const imageX = (centerX - prev.x) / prev.scale;
         const imageY = (centerY - prev.y) / prev.scale;
-        
+
         return {
           x: centerX - imageX * newScale,
           y: centerY - imageY * newScale,
@@ -406,7 +466,7 @@ export function ImageEditor({
       return { ...prev, scale: newScale };
     });
   }, [getActiveContainer]);
-  
+
   const zoomOut = useCallback(() => {
     setTransform((prev) => {
       const newScale = Math.max(0.1, prev.scale - 0.25);
@@ -415,10 +475,10 @@ export function ImageEditor({
         const rect = container.getBoundingClientRect();
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
-        
+
         const imageX = (centerX - prev.x) / prev.scale;
         const imageY = (centerY - prev.y) / prev.scale;
-        
+
         return {
           x: centerX - imageX * newScale,
           y: centerY - imageY * newScale,
@@ -428,7 +488,7 @@ export function ImageEditor({
       return { ...prev, scale: newScale };
     });
   }, [getActiveContainer]);
-  
+
   const resetZoom = useCallback(() => {
     const container = getActiveContainer();
     if (container && imageDimensions.width > 0) {
@@ -436,20 +496,20 @@ export function ImageEditor({
       const padding = 48;
       const availableWidth = containerRect.width - padding;
       const availableHeight = containerRect.height - padding;
-      
+
       const scaleX = availableWidth / imageDimensions.width;
       const scaleY = availableHeight / imageDimensions.height;
       const fitScale = Math.min(scaleX, scaleY, 1);
-      
+
       const scaledWidth = imageDimensions.width * fitScale;
       const scaledHeight = imageDimensions.height * fitScale;
       const x = (containerRect.width - scaledWidth) / 2;
       const y = (containerRect.height - scaledHeight) / 2;
-      
+
       setTransform({ x, y, scale: fitScale });
     }
   }, [imageDimensions, getActiveContainer]);
-  
+
   // Helper functions
   const normalizeRect = (rect: DrawingRect) => {
     const x = Math.min(rect.startX, rect.endX);
@@ -458,15 +518,15 @@ export function ImageEditor({
     const height = Math.abs(rect.endY - rect.startY);
     return { x, y, width, height };
   };
-  
+
   const calculateResize = (
     mask: MaskRegion,
     handle: string,
-    pos: { x: number; y: number }
+    pos: { x: number; y: number },
   ): Partial<MaskRegion> => {
     const updates: Partial<MaskRegion> = {};
     const minSize = 10;
-    
+
     switch (handle) {
       case 'nw':
         updates.x = Math.min(pos.x, mask.x + mask.width - minSize);
@@ -489,24 +549,27 @@ export function ImageEditor({
         updates.height = Math.max(minSize, pos.y - mask.y);
         break;
     }
-    
+
     return updates;
   };
-  
+
   const getCursorStyle = (): React.CSSProperties['cursor'] => {
     if (isPanning) return 'grabbing';
     if (isSpacePressed) return 'grab';
     return 'crosshair';
   };
-  
+
   // Render masks overlay
   const renderMasks = (showHandles: boolean = true) => {
     return (
-      <div className="mask-overlay" style={{ pointerEvents: isSpacePressed ? 'none' : 'auto' }}>
+      <div
+        className="mask-overlay"
+        style={{ pointerEvents: isSpacePressed ? 'none' : 'auto' }}
+      >
         {masks.map((mask, index) => {
           const isSelected = selectedMaskId === mask.id;
           const isHovered = hoveredMaskId === mask.id;
-          
+
           return (
             <div
               key={mask.id}
@@ -550,13 +613,25 @@ export function ImageEditor({
                   {index + 1}
                 </div>
               )}
-              
+
               {showHandles && !isSpacePressed && isSelected && (
                 <>
-                  <div className="mask-handle nw" onMouseDown={(e) => handleResizeStart(e, mask.id, 'nw')} />
-                  <div className="mask-handle ne" onMouseDown={(e) => handleResizeStart(e, mask.id, 'ne')} />
-                  <div className="mask-handle sw" onMouseDown={(e) => handleResizeStart(e, mask.id, 'sw')} />
-                  <div className="mask-handle se" onMouseDown={(e) => handleResizeStart(e, mask.id, 'se')} />
+                  <div
+                    className="mask-handle nw"
+                    onMouseDown={(e) => handleResizeStart(e, mask.id, 'nw')}
+                  />
+                  <div
+                    className="mask-handle ne"
+                    onMouseDown={(e) => handleResizeStart(e, mask.id, 'ne')}
+                  />
+                  <div
+                    className="mask-handle sw"
+                    onMouseDown={(e) => handleResizeStart(e, mask.id, 'sw')}
+                  />
+                  <div
+                    className="mask-handle se"
+                    onMouseDown={(e) => handleResizeStart(e, mask.id, 'se')}
+                  />
                   <button
                     className="mask-delete"
                     onClick={(e) => {
@@ -572,7 +647,7 @@ export function ImageEditor({
             </div>
           );
         })}
-        
+
         {drawing && (
           <div
             className="mask-rect drawing"
@@ -588,7 +663,7 @@ export function ImageEditor({
       </div>
     );
   };
-  
+
   // Render a single image canvas
   const renderImageCanvas = (
     imgSrc: string,
@@ -596,7 +671,7 @@ export function ImageEditor({
     containerRefProp: React.RefObject<HTMLDivElement | null>,
     showMasks: boolean,
     alt: string,
-    overlayContent?: React.ReactNode
+    overlayContent?: React.ReactNode,
   ) => {
     return (
       <div
@@ -633,14 +708,20 @@ export function ImageEditor({
       </div>
     );
   };
-  
+
   return (
     <div className="editor-container">
       {viewMode === 'side-by-side' && (
         <>
           <div className="canvas-panel">
             <div className="canvas-panel-header">Expected (Baseline)</div>
-            {renderImageCanvas(baselineUrl, null, baselineContainerRef, false, 'Expected')}
+            {renderImageCanvas(
+              baselineUrl,
+              null,
+              baselineContainerRef,
+              false,
+              'Expected',
+            )}
           </div>
           <div className="canvas-panel">
             <div className="canvas-panel-header">Actual</div>
@@ -678,41 +759,34 @@ export function ImageEditor({
                 transformOrigin: '0 0',
               }}
               draggable={false}
-            />
+            />,
           )}
         </div>
       )}
 
       {/* Zoom controls */}
       <div className="zoom-controls">
-        <button 
-          className="btn btn-secondary btn-icon" 
-          onClick={zoomOut}
-          tabIndex={-1}
-        >
+        <button className="btn btn-secondary btn-icon" onClick={zoomOut} tabIndex={-1}>
           −
         </button>
         <span className="zoom-level">{Math.round(transform.scale * 100)}%</span>
-        <button 
-          className="btn btn-secondary btn-icon" 
-          onClick={zoomIn}
-          tabIndex={-1}
-        >
+        <button className="btn btn-secondary btn-icon" onClick={zoomIn} tabIndex={-1}>
           +
         </button>
-        <button 
-          className="btn btn-secondary btn-icon" 
-          onClick={resetZoom} 
+        <button
+          className="btn btn-secondary btn-icon"
+          onClick={resetZoom}
           title="Fit to view"
           tabIndex={-1}
         >
           ⟲
         </button>
       </div>
-      
+
       {/* Instructions */}
       <div className="instructions">
-        Draw to mask • <kbd>Del</kbd> delete • <kbd>Esc</kbd> cancel • <kbd>Space</kbd>+drag to pan • Scroll to zoom
+        Draw to mask • <kbd>Del</kbd> delete • <kbd>Esc</kbd> cancel • <kbd>Space</kbd>
+        +drag to pan • Scroll to zoom
       </div>
     </div>
   );

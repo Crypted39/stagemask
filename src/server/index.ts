@@ -1,29 +1,24 @@
-import express, { Request, Response } from "express";
-import { createServer as createHttpServer, Server } from "http";
-import { WebSocketServer, WebSocket } from "ws";
-import * as path from "path";
-import * as fs from "fs";
-import { glob } from "glob";
-import { ConfigManager } from "../core/config-manager";
-import { ImageProcessor } from "../core/image-processor";
-import {
-  FailedScreenshot,
-  MaskRegion,
-  DEFAULT_PORT,
-  WSMessage,
-} from "../core/types";
+import express, { Request, Response } from 'express';
+import { createServer as createHttpServer, Server } from 'http';
+import { WebSocketServer, WebSocket } from 'ws';
+import * as path from 'path';
+import * as fs from 'fs';
+import { glob } from 'glob';
+import { ConfigManager } from '../core/config-manager';
+import { ImageProcessor } from '../core/image-processor';
+import { FailedScreenshot, MaskRegion, DEFAULT_PORT, WSMessage } from '../core/types';
 
 /**
  * Safely extract a string from Express 5 query/param values (can be string | string[])
  */
 function getString(value: string | string[] | undefined): string {
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return value;
   }
   if (Array.isArray(value) && value.length > 0) {
     return value[0];
   }
-  return "";
+  return '';
 }
 
 export interface ServerOptions {
@@ -44,7 +39,7 @@ export class ReviewServer {
     this.options = {
       port: options.port || DEFAULT_PORT,
       projectRoot: options.projectRoot || process.cwd(),
-      testResultsDir: options.testResultsDir || "",
+      testResultsDir: options.testResultsDir || '',
     };
 
     this.app = express();
@@ -58,17 +53,14 @@ export class ReviewServer {
   private setupMiddleware(): void {
     this.app.use(express.json());
     // CLI runs from dist/cli/, UI is at dist/ui/
-    this.app.use(express.static(path.join(__dirname, "../ui")));
+    this.app.use(express.static(path.join(__dirname, '../ui')));
 
     // CORS for development
     this.app.use((req, res, next) => {
-      res.header("Access-Control-Allow-Origin", "*");
-      res.header(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS",
-      );
-      res.header("Access-Control-Allow-Headers", "Content-Type");
-      if (req.method === "OPTIONS") {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type');
+      if (req.method === 'OPTIONS') {
         res.sendStatus(200);
       } else {
         next();
@@ -78,34 +70,28 @@ export class ReviewServer {
 
   private setupRoutes(): void {
     // Get all failed screenshots
-    this.app.get(
-      "/api/failed-screenshots",
-      async (req: Request, res: Response) => {
-        try {
-          const screenshots = await this.findFailedScreenshots();
-          res.json(screenshots);
-        } catch (error) {
-          res.status(500).json({ error: String(error) });
-        }
-      },
-    );
+    this.app.get('/api/failed-screenshots', async (req: Request, res: Response) => {
+      try {
+        const screenshots = await this.findFailedScreenshots();
+        res.json(screenshots);
+      } catch (error) {
+        res.status(500).json({ error: String(error) });
+      }
+    });
 
     // Get specific screenshot details
-    this.app.get(
-      "/api/screenshot/:name",
-      async (req: Request, res: Response) => {
-        try {
-          const name = getString(req.params.name);
-          const config = this.config.getScreenshotConfig(name);
-          res.json(config || { name, masks: [] });
-        } catch (error) {
-          res.status(500).json({ error: String(error) });
-        }
-      },
-    );
+    this.app.get('/api/screenshot/:name', async (req: Request, res: Response) => {
+      try {
+        const name = getString(req.params.name);
+        const config = this.config.getScreenshotConfig(name);
+        res.json(config || { name, masks: [] });
+      } catch (error) {
+        res.status(500).json({ error: String(error) });
+      }
+    });
 
     // Get masks for a screenshot
-    this.app.get("/api/masks/:name", (req: Request, res: Response) => {
+    this.app.get('/api/masks/:name', (req: Request, res: Response) => {
       try {
         const name = getString(req.params.name);
         const masks = this.config.getMasks(decodeURIComponent(name));
@@ -116,13 +102,13 @@ export class ReviewServer {
     });
 
     // Save masks for a screenshot
-    this.app.post("/api/masks/:name", (req: Request, res: Response) => {
+    this.app.post('/api/masks/:name', (req: Request, res: Response) => {
       try {
         const name = getString(req.params.name);
         const { masks } = req.body as { masks: MaskRegion[] };
         this.config.setMasks(decodeURIComponent(name), masks);
         this.config.save();
-        this.broadcast({ type: "masks-updated", payload: { name, masks } });
+        this.broadcast({ type: 'masks-updated', payload: { name, masks } });
         res.json({ success: true });
       } catch (error) {
         res.status(500).json({ error: String(error) });
@@ -130,14 +116,14 @@ export class ReviewServer {
     });
 
     // Add a single mask
-    this.app.post("/api/masks/:name/add", (req: Request, res: Response) => {
+    this.app.post('/api/masks/:name/add', (req: Request, res: Response) => {
       try {
         const name = getString(req.params.name);
-        const maskData = req.body as Omit<MaskRegion, "id" | "createdAt">;
+        const maskData = req.body as Omit<MaskRegion, 'id' | 'createdAt'>;
         const mask = this.config.addMask(decodeURIComponent(name), maskData);
         this.config.save();
         this.broadcast({
-          type: "masks-updated",
+          type: 'masks-updated',
           payload: { name, masks: this.config.getMasks(name) },
         });
         res.json(mask);
@@ -147,38 +133,30 @@ export class ReviewServer {
     });
 
     // Delete a mask
-    this.app.delete(
-      "/api/masks/:name/:maskId",
-      (req: Request, res: Response) => {
-        try {
-          const name = getString(req.params.name);
-          const maskId = getString(req.params.maskId);
-          const success = this.config.removeMask(
-            decodeURIComponent(name),
-            maskId,
-          );
-          if (success) {
-            this.config.save();
-            this.broadcast({
-              type: "masks-updated",
-              payload: { name, masks: this.config.getMasks(name) },
-            });
-          }
-          res.json({ success });
-        } catch (error) {
-          res.status(500).json({ error: String(error) });
+    this.app.delete('/api/masks/:name/:maskId', (req: Request, res: Response) => {
+      try {
+        const name = getString(req.params.name);
+        const maskId = getString(req.params.maskId);
+        const success = this.config.removeMask(decodeURIComponent(name), maskId);
+        if (success) {
+          this.config.save();
+          this.broadcast({
+            type: 'masks-updated',
+            payload: { name, masks: this.config.getMasks(name) },
+          });
         }
-      },
-    );
+        res.json({ success });
+      } catch (error) {
+        res.status(500).json({ error: String(error) });
+      }
+    });
 
     // Serve image files (restricted to test-results and snapshot directories)
-    this.app.get("/api/image", async (req: Request, res: Response) => {
+    this.app.get('/api/image', async (req: Request, res: Response) => {
       try {
-        const imagePath = getString(
-          req.query.path as string | string[] | undefined,
-        );
+        const imagePath = getString(req.query.path as string | string[] | undefined);
         if (!imagePath) {
-          res.status(400).json({ error: "Path parameter required" });
+          res.status(400).json({ error: 'Path parameter required' });
           return;
         }
 
@@ -187,12 +165,12 @@ export class ReviewServer {
         if (!this.isPathAllowed(resolvedPath)) {
           res
             .status(403)
-            .json({ error: "Access denied: path outside allowed directories" });
+            .json({ error: 'Access denied: path outside allowed directories' });
           return;
         }
 
         if (!fs.existsSync(resolvedPath)) {
-          res.status(404).json({ error: "Image not found" });
+          res.status(404).json({ error: 'Image not found' });
           return;
         }
         res.sendFile(resolvedPath);
@@ -202,13 +180,11 @@ export class ReviewServer {
     });
 
     // Get image as base64
-    this.app.get("/api/image-data", async (req: Request, res: Response) => {
+    this.app.get('/api/image-data', async (req: Request, res: Response) => {
       try {
-        const imagePath = getString(
-          req.query.path as string | string[] | undefined,
-        );
+        const imagePath = getString(req.query.path as string | string[] | undefined);
         if (!imagePath) {
-          res.status(400).json({ error: "Path parameter required" });
+          res.status(400).json({ error: 'Path parameter required' });
           return;
         }
 
@@ -217,12 +193,12 @@ export class ReviewServer {
         if (!this.isPathAllowed(resolvedPath)) {
           res
             .status(403)
-            .json({ error: "Access denied: path outside allowed directories" });
+            .json({ error: 'Access denied: path outside allowed directories' });
           return;
         }
 
         if (!fs.existsSync(resolvedPath)) {
-          res.status(404).json({ error: "Image not found" });
+          res.status(404).json({ error: 'Image not found' });
           return;
         }
         const dataUrl = await this.imageProcessor.toDataURL(resolvedPath);
@@ -233,7 +209,7 @@ export class ReviewServer {
     });
 
     // Generate comparison with current masks
-    this.app.post("/api/compare/:name", async (req: Request, res: Response) => {
+    this.app.post('/api/compare/:name', async (req: Request, res: Response) => {
       try {
         const name = getString(req.params.name);
         const { baselinePath, actualPath } = req.body;
@@ -248,7 +224,7 @@ export class ReviewServer {
         ) {
           res
             .status(403)
-            .json({ error: "Access denied: path outside allowed directories" });
+            .json({ error: 'Access denied: path outside allowed directories' });
           return;
         }
 
@@ -269,12 +245,12 @@ export class ReviewServer {
     });
 
     // Get full config
-    this.app.get("/api/config", (req: Request, res: Response) => {
+    this.app.get('/api/config', (req: Request, res: Response) => {
       res.json(this.config.getConfig());
     });
 
     // Update global threshold
-    this.app.post("/api/config/threshold", (req: Request, res: Response) => {
+    this.app.post('/api/config/threshold', (req: Request, res: Response) => {
       try {
         const { threshold } = req.body;
         this.config.setGlobalThreshold(threshold);
@@ -286,8 +262,8 @@ export class ReviewServer {
     });
 
     // Fallback to index.html for SPA routing (Express 5 requires named wildcard)
-    this.app.get("/{*splat}", (req: Request, res: Response) => {
-      const indexPath = path.join(__dirname, "../ui/index.html");
+    this.app.get('/{*splat}', (req: Request, res: Response) => {
+      const indexPath = path.join(__dirname, '../ui/index.html');
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
       } else {
@@ -307,8 +283,7 @@ export class ReviewServer {
 
     // Check if the path is within the project root
     return (
-      resolvedPath.startsWith(projectRoot + path.sep) ||
-      resolvedPath === projectRoot
+      resolvedPath.startsWith(projectRoot + path.sep) || resolvedPath === projectRoot
     );
   }
 
@@ -318,20 +293,20 @@ export class ReviewServer {
     // Look for test-results directory (custom or default)
     const testResultsDir = this.options.testResultsDir
       ? path.resolve(this.options.projectRoot, this.options.testResultsDir)
-      : path.join(this.options.projectRoot, "test-results");
+      : path.join(this.options.projectRoot, 'test-results');
 
     if (!fs.existsSync(testResultsDir)) {
       return results;
     }
 
     // Find all actual vs expected pairs
-    const actualImages = await glob("**/*-actual.png", {
+    const actualImages = await glob('**/*-actual.png', {
       cwd: testResultsDir,
       absolute: true,
     });
 
     for (const actualPath of actualImages) {
-      const baseName = path.basename(actualPath, "-actual.png");
+      const baseName = path.basename(actualPath, '-actual.png');
       const dir = path.dirname(actualPath);
 
       const expectedPath = path.join(dir, `${baseName}-expected.png`);
@@ -340,13 +315,13 @@ export class ReviewServer {
 
       if (fs.existsSync(expectedPath)) {
         // Try to read metadata file for accurate test info
-        let testFile = "unknown";
-        let describeName = "Unknown Suite";
-        let testName = "Unknown Test";
+        let testFile = 'unknown';
+        let describeName = 'Unknown Suite';
+        let testName = 'Unknown Test';
 
         if (fs.existsSync(metadataPath)) {
           try {
-            const metadata = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
+            const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
             testFile = metadata.testFile || testFile;
             describeName = metadata.describeName || describeName;
             testName = metadata.testName || testName;
@@ -356,7 +331,7 @@ export class ReviewServer {
         } else {
           // Fallback: try to parse from folder name (less accurate)
           const relativePath = path.relative(testResultsDir, dir);
-          const folderName = relativePath.split(path.sep)[0] || "";
+          const folderName = relativePath.split(path.sep)[0] || '';
           const parsed = this.parsePlaywrightFolderName(folderName);
           testFile = parsed.testFile;
           describeName = parsed.describeName;
@@ -370,7 +345,7 @@ export class ReviewServer {
           screenshotName: `${baseName}.png`,
           baselinePath: expectedPath,
           actualPath,
-          diffPath: fs.existsSync(diffPath) ? diffPath : "",
+          diffPath: fs.existsSync(diffPath) ? diffPath : '',
           failedAt: fs.statSync(actualPath).mtime.toISOString(),
           comparison: {
             passed: false,
@@ -411,7 +386,7 @@ export class ReviewServer {
     testName: string;
   } {
     // Common browser suffixes
-    const browsers = ["chromium", "firefox", "webkit", "chrome", "msedge"];
+    const browsers = ['chromium', 'firefox', 'webkit', 'chrome', 'msedge'];
     let name = folderName;
 
     // Remove browser suffix
@@ -423,13 +398,13 @@ export class ReviewServer {
     }
 
     // Split by dashes
-    const parts = name.split("-");
+    const parts = name.split('-');
 
     if (parts.length < 2) {
       return {
         testFile: folderName,
-        describeName: "Unknown",
-        testName: "Unknown",
+        describeName: 'Unknown',
+        testName: 'Unknown',
       };
     }
 
@@ -446,26 +421,26 @@ export class ReviewServer {
     if (meaningfulParts.length === 0) {
       return {
         testFile,
-        describeName: "Tests",
-        testName: parts.slice(1).join(" "),
+        describeName: 'Tests',
+        testName: parts.slice(1).join(' '),
       };
     }
 
     // Try to identify where describe ends and test begins
     // Common patterns: "should", "can", "will", "does", "is", "has", "displays", "shows"
     const testStartWords = [
-      "should",
-      "can",
-      "will",
-      "does",
-      "is",
-      "has",
-      "displays",
-      "shows",
-      "renders",
-      "loads",
-      "handles",
-      "match",
+      'should',
+      'can',
+      'will',
+      'does',
+      'is',
+      'has',
+      'displays',
+      'shows',
+      'renders',
+      'loads',
+      'handles',
+      'match',
     ];
 
     let describeEndIndex = -1;
@@ -480,8 +455,8 @@ export class ReviewServer {
     if (describeEndIndex > 0) {
       return {
         testFile,
-        describeName: meaningfulParts.slice(0, describeEndIndex).join(" "),
-        testName: meaningfulParts.slice(describeEndIndex).join(" "),
+        describeName: meaningfulParts.slice(0, describeEndIndex).join(' '),
+        testName: meaningfulParts.slice(describeEndIndex).join(' '),
       };
     }
 
@@ -489,9 +464,8 @@ export class ReviewServer {
     const midpoint = Math.ceil(meaningfulParts.length / 2);
     return {
       testFile,
-      describeName: meaningfulParts.slice(0, midpoint).join(" ") || "Tests",
-      testName:
-        meaningfulParts.slice(midpoint).join(" ") || meaningfulParts.join(" "),
+      describeName: meaningfulParts.slice(0, midpoint).join(' ') || 'Tests',
+      testName: meaningfulParts.slice(midpoint).join(' ') || meaningfulParts.join(' '),
     };
   }
 
@@ -566,25 +540,25 @@ export class ReviewServer {
       // Setup WebSocket
       this.wss = new WebSocketServer({ server: this.server });
 
-      this.wss.on("connection", (ws) => {
-        console.log("Client connected");
+      this.wss.on('connection', (ws) => {
+        console.log('Client connected');
 
-        ws.on("message", (data) => {
+        ws.on('message', (data) => {
           try {
             const message = JSON.parse(data.toString()) as WSMessage;
             this.handleWsMessage(ws, message);
           } catch (e) {
-            console.error("Invalid WebSocket message:", e);
+            console.error('Invalid WebSocket message:', e);
           }
         });
 
-        ws.on("close", () => {
-          console.log("Client disconnected");
+        ws.on('close', () => {
+          console.log('Client disconnected');
         });
       });
 
       // Listen only on localhost for security (not exposed to network)
-      this.server.listen(this.options.port, "127.0.0.1", () => {
+      this.server.listen(this.options.port, '127.0.0.1', () => {
         resolve();
       });
     });
@@ -592,9 +566,9 @@ export class ReviewServer {
 
   private handleWsMessage(ws: WebSocket, message: WSMessage): void {
     switch (message.type) {
-      case "test-rerun-requested":
+      case 'test-rerun-requested':
         // Could trigger a test rerun here
-        console.log("Test rerun requested:", message.payload);
+        console.log('Test rerun requested:', message.payload);
         break;
     }
   }

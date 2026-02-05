@@ -52,7 +52,7 @@ export class ImageProcessor {
   convertMaskToPixels(
     mask: MaskRegion,
     imageWidth: number,
-    imageHeight: number
+    imageHeight: number,
   ): { x: number; y: number; width: number; height: number } {
     if (!mask.isPercentage) {
       return {
@@ -75,13 +75,21 @@ export class ImageProcessor {
    * Apply masks to an image by setting masked pixels to a specific color
    * Returns a new PNG with masks applied (doesn't modify original)
    */
-  applyMasks(image: PNG, masks: MaskRegion[], maskColor = { r: 255, g: 0, b: 255, a: 255 }): PNG {
+  applyMasks(
+    image: PNG,
+    masks: MaskRegion[],
+    maskColor = { r: 255, g: 0, b: 255, a: 255 },
+  ): PNG {
     // Create a copy
     const masked = new PNG({ width: image.width, height: image.height });
     image.data.copy(masked.data);
 
     for (const mask of masks) {
-      const { x, y, width, height } = this.convertMaskToPixels(mask, image.width, image.height);
+      const { x, y, width, height } = this.convertMaskToPixels(
+        mask,
+        image.width,
+        image.height,
+      );
 
       // Clamp values to image bounds
       const startX = Math.max(0, x);
@@ -110,13 +118,17 @@ export class ImageProcessor {
   createMaskPreview(
     image: PNG,
     masks: MaskRegion[],
-    overlayColor = { r: 255, g: 0, b: 0, a: 100 }
+    overlayColor = { r: 255, g: 0, b: 0, a: 100 },
   ): PNG {
     const preview = new PNG({ width: image.width, height: image.height });
     image.data.copy(preview.data);
 
     for (const mask of masks) {
-      const { x, y, width, height } = this.convertMaskToPixels(mask, image.width, image.height);
+      const { x, y, width, height } = this.convertMaskToPixels(
+        mask,
+        image.width,
+        image.height,
+      );
 
       const startX = Math.max(0, x);
       const startY = Math.max(0, y);
@@ -130,13 +142,13 @@ export class ImageProcessor {
           // Alpha blend
           const alpha = overlayColor.a / 255;
           preview.data[idx] = Math.round(
-            preview.data[idx] * (1 - alpha) + overlayColor.r * alpha
+            preview.data[idx] * (1 - alpha) + overlayColor.r * alpha,
           );
           preview.data[idx + 1] = Math.round(
-            preview.data[idx + 1] * (1 - alpha) + overlayColor.g * alpha
+            preview.data[idx + 1] * (1 - alpha) + overlayColor.g * alpha,
           );
           preview.data[idx + 2] = Math.round(
-            preview.data[idx + 2] * (1 - alpha) + overlayColor.b * alpha
+            preview.data[idx + 2] * (1 - alpha) + overlayColor.b * alpha,
           );
         }
       }
@@ -163,7 +175,7 @@ export class ImageProcessor {
     width: number,
     height: number,
     color: { r: number; g: number; b: number; a: number },
-    thickness = 2
+    thickness = 2,
   ): void {
     const setPixel = (px: number, py: number) => {
       if (px >= 0 && px < image.width && py >= 0 && py < image.height) {
@@ -199,7 +211,7 @@ export class ImageProcessor {
     baselinePath: string,
     actualPath: string,
     masks: MaskRegion[] = [],
-    threshold = 0.1
+    threshold = 0.1,
   ): Promise<ComparisonResult> {
     const baseline = await this.loadImage(baselinePath);
     const actual = await this.loadImage(actualPath);
@@ -233,7 +245,7 @@ export class ImageProcessor {
       diff.data,
       baseline.width,
       baseline.height,
-      { threshold }
+      { threshold },
     );
 
     const totalPixels = baseline.width * baseline.height;
@@ -261,7 +273,7 @@ export class ImageProcessor {
     actualPath: string,
     outputPath: string,
     masks: MaskRegion[] = [],
-    threshold = 0.1
+    threshold = 0.1,
   ): Promise<ComparisonResult> {
     const baseline = await this.loadImage(baselinePath);
     const actual = await this.loadImage(actualPath);
@@ -312,7 +324,7 @@ export class ImageProcessor {
         threshold,
         diffColor: [255, 0, 0],
         diffColorAlt: [0, 255, 0],
-      }
+      },
     );
 
     await this.saveImage(diff, outputPath);
@@ -337,7 +349,9 @@ export class ImageProcessor {
   /**
    * Get image dimensions without loading full image
    */
-  async getImageDimensions(imagePath: string): Promise<{ width: number; height: number }> {
+  async getImageDimensions(
+    imagePath: string,
+  ): Promise<{ width: number; height: number }> {
     const image = await this.loadImage(imagePath);
     return { width: image.width, height: image.height };
   }

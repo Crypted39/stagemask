@@ -106,10 +106,10 @@ export interface FailedScreenshot {
  * WebSocket message types for real-time communication
  */
 export type WSMessageType =
-  | "masks-updated"
-  | "test-rerun-requested"
-  | "test-result"
-  | "config-saved";
+  | 'masks-updated'
+  | 'test-rerun-requested'
+  | 'test-result'
+  | 'config-saved';
 
 export interface WSMessage {
   type: WSMessageType;
@@ -137,5 +137,5 @@ export const DEFAULT_CONFIG: MaskConfig = {
   screenshots: {},
 };
 
-export const CONFIG_FILENAME = "stage-masks.json";
+export const CONFIG_FILENAME = 'stage-masks.json';
 export const DEFAULT_PORT = 5899;

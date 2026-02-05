@@ -17,9 +17,18 @@
           "isPercentage": false,
           "id": "mask_1770239351444_z6hgy8oph",
           "createdAt": "2026-02-04T21:09:11.444Z"
+        },
+        {
+          "x": 173.14285714285714,
+          "y": 108.14285714285714,
+          "width": 66.85714285714286,
+          "height": 85.14285714285714,
+          "isPercentage": false,
+          "id": "mask_1770325686799_yr9ufbyvu",
+          "createdAt": "2026-02-05T21:08:06.799Z"
         }
       ],
-      "updatedAt": "2026-02-04T21:20:49.987Z"
+      "updatedAt": "2026-02-05T21:08:06.799Z"
     },
     "soft-dashboard-card.png": {
       "name": "soft-dashboard-card.png",

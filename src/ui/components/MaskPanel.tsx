@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { MaskRegion } from '../../core/types';
 
 interface MaskPanelProps {
@@ -11,11 +11,11 @@ interface MaskPanelProps {
   onHover: (maskId: string | null) => void;
 }
 
-export function MaskPanel({ 
-  masks, 
+export function MaskPanel({
+  masks,
   selectedMaskId,
   hoveredMaskId,
-  onUpdate, 
+  onUpdate,
   onRemove,
   onSelect,
   onHover,
@@ -46,15 +46,17 @@ export function MaskPanel({
       <div className="mask-panel-header">
         <h3 className="mask-panel-title">Masks ({masks.length})</h3>
       </div>
-      
+
       <div className="mask-list">
         {masks.length === 0 ? (
-          <div style={{ 
-            padding: '2rem 1rem', 
-            textAlign: 'center', 
-            color: 'var(--text-muted)',
-            fontSize: '0.875rem'
-          }}>
+          <div
+            style={{
+              padding: '2rem 1rem',
+              textAlign: 'center',
+              color: 'var(--text-muted)',
+              fontSize: '0.875rem',
+            }}
+          >
             <div style={{ marginBottom: '0.5rem' }}>No masks yet</div>
             <div style={{ fontSize: '0.75rem' }}>
               Click and drag on the image to create a mask region
@@ -62,29 +64,33 @@ export function MaskPanel({
           </div>
         ) : (
           masks.map((mask, index) => (
-            <div 
-              key={mask.id} 
+            <div
+              key={mask.id}
               className={`mask-list-item ${selectedMaskId === mask.id ? 'selected' : ''} ${hoveredMaskId === mask.id ? 'hovered' : ''}`}
               onClick={() => onSelect(mask.id)}
               onMouseEnter={() => onHover(mask.id)}
               onMouseLeave={() => onHover(null)}
               style={{ cursor: 'pointer' }}
             >
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                marginBottom: '0.25rem'
-              }}>
-                <span style={{ 
+              <div
+                style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  fontSize: '0.75rem', 
-                  fontWeight: 600, 
-                  color: 'var(--text-secondary)' 
-                }}>
-                  <span 
+                  justifyContent: 'space-between',
+                  marginBottom: '0.25rem',
+                }}
+              >
+                <span
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  <span
                     className="mask-number-badge"
                     style={{
                       display: 'inline-flex',
@@ -121,11 +127,9 @@ export function MaskPanel({
                   ×
                 </button>
               </div>
-              
-              <div className="mask-list-item-coords">
-                {formatCoords(mask)}
-              </div>
-              
+
+              <div className="mask-list-item-coords">{formatCoords(mask)}</div>
+
               {editingId === mask.id ? (
                 <div style={{ marginTop: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
                   <input
@@ -184,12 +188,14 @@ export function MaskPanel({
       </div>
 
       {masks.length > 0 && (
-        <div style={{ 
-          padding: 'var(--spacing-md)', 
-          borderTop: '1px solid var(--border-subtle)',
-          fontSize: '0.75rem',
-          color: 'var(--text-muted)'
-        }}>
+        <div
+          style={{
+            padding: 'var(--spacing-md)',
+            borderTop: '1px solid var(--border-subtle)',
+            fontSize: '0.75rem',
+            color: 'var(--text-muted)',
+          }}
+        >
           💡 Tip: Add reasons to document why areas are masked
         </div>
       )}
